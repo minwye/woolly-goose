@@ -118,6 +118,22 @@
     .name-input:focus { border-color: var(--accent); background: var(--surface); }
     .name-input::placeholder { color: var(--muted); }
 
+    .show-summary-btn {
+      display: inline-block;
+      margin-top: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .show-summary-btn:hover { background: var(--accent-hover); }
+
     .research-notice {
       font-size: 0.72rem;
       color: var(--muted);
@@ -683,7 +699,7 @@ function onComplete(fullText, msgEl, bubbleEl) {
     msgEl.remove();
     state.summaryRaw = fullText;
     if (state.timerInterval) clearInterval(state.timerInterval);
-    buildSummary(fullText);
+    showThankYou();
     return;
   }
 
@@ -703,6 +719,18 @@ function showError(status, detail) {
   const m = document.createElement('div'); m.className = 'msg error';
   const b = document.createElement('div'); b.className = 'bubble'; b.textContent = msg;
   m.appendChild(b); c.appendChild(m); scrollBottom();
+}
+
+// ─── THANK YOU ───────────────────────────────────────────────────────────────
+function showThankYou() {
+  const c = document.getElementById('chat-messages');
+  const m = document.createElement('div'); m.className = 'msg ai';
+  const b = document.createElement('div'); b.className = 'bubble';
+  b.innerHTML = `Thank you for your time, ${state.participantName.split(' ')[0]} — this was a really valuable conversation.<br><br>
+    <button class="show-summary-btn" onclick="buildSummary(state.summaryRaw)">View summary →</button>`;
+  m.appendChild(b); c.appendChild(m); scrollBottom();
+  document.getElementById('chat-input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
 }
 
 // ─── SUMMARY ─────────────────────────────────────────────────────────────────
