@@ -379,7 +379,6 @@
       placeholder="Your full name"
       autocomplete="name"
       autocapitalize="words"
-      onkeydown="if(event.key==='Enter') startSession()"
     />
     <button class="btn" onclick="startSession()">Start Interview →</button>
     <p class="research-notice">
@@ -929,6 +928,9 @@ function copySummary() {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 showScreen('start');
+document.getElementById('full-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startSession();
+});
 </script>
 </body>
 </html>
