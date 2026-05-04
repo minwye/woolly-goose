@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Woolly Goose</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #d97706;
+      --accent-hover: #b45309;
+      --accent-light: #fef3c7;
+      --bg:           #fafaf9;
+      --surface:      #ffffff;
+      --border:       #e7e5e4;
+      --text:         #1c1917;
+      --muted:        #78716c;
+      --ai-bubble:    #fdf8f3;
+      --radius:       12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .screen { display: none; height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ── START SCREEN ── */
+    #screen-start { align-items: center; justify-content: center; padding: 24px; }
+
+    .start-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .goose { font-size: 2.4rem; margin-bottom: 14px; line-height: 1; }
+
+    .wordmark {
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .wordmark em { font-style: normal; color: var(--accent); }
+
+    .tagline {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    .meta-item { text-align: center; }
+    .meta-item .val { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .meta-item .lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 22px;
+      font-size: 0.925rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      width: 100%;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--bg); }
+
+    .access-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      color: var(--text);
+      background: var(--bg);
+      margin-bottom: 10px;
+      text-align: center;
+      letter-spacing: 0.05em;
+      transition: border-color 0.15s;
+    }
+    .access-input:focus { border-color: var(--accent); background: var(--surface); }
+    .access-input::placeholder { color: var(--muted); letter-spacing: 0; }
+
+    /* ── CHAT SCREEN ── */
+    .chat-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 18px 8px;
+      flex-shrink: 0;
+    }
+    .chat-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 50px;
+    }
+    .header-wordmark { font-size: 0.9rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+    .header-wordmark em { font-style: normal; color: var(--accent); }
+
+    .timer {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .timer.warn  { color: var(--accent); }
+    .timer.over  { color: var(--muted); opacity: 0.6; }
+
+    .progress-bar { display: flex; gap: 3px; }
+    .seg {
+      flex: 1;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--border);
+      transition: background 0.4s;
+    }
+    .seg.active { background: var(--accent-light); }
+    .seg.done   { background: var(--accent); }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .msg { display: flex; max-width: 78%; }
+    .msg.ai    { align-self: flex-start; }
+    .msg.user  { align-self: flex-end; }
+    .msg.error { align-self: flex-start; max-width: 90%; }
+
+    .bubble {
+      padding: 11px 15px;
+      border-radius: 16px;
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+    .msg.ai .bubble {
+      background: var(--ai-bubble);
+      border: 1px solid var(--border);
+      border-radius: 3px 16px 16px 16px;
+    }
+    .msg.user .bubble {
+      background: var(--accent);
+      color: white;
+      border-radius: 16px 3px 16px 16px;
+    }
+    .msg.error .bubble {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      border-radius: 3px 16px 16px 16px;
+      font-size: 0.82rem;
+    }
+
+    .dots { display: flex; align-items: center; gap: 5px; padding: 3px 0; }
+    .dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      opacity: 0.4;
+      animation: dp 1.2s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dp {
+      0%,60%,100% { opacity: 0.35; transform: scale(1); }
+      30%          { opacity: 1;    transform: scale(1.2); }
+    }
+
+    .chat-footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    #chat-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 96px;
+      overflow-y: auto;
+      line-height: 1.45;
+      background: var(--bg);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    #chat-input:focus   { border-color: var(--accent); background: var(--surface); }
+    #chat-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #send-btn { width: 38px; height: 38px; border-radius: 50%; padding: 0; flex-shrink: 0; font-size: 1rem; }
+
+    /* ── SUMMARY SCREEN ── */
+    #screen-summary {
+      overflow-y: auto;
+      align-items: center;
+      padding: 36px 20px 60px;
+    }
+    .sum-inner { max-width: 580px; width: 100%; }
+
+    .sum-top { text-align: center; margin-bottom: 6px; }
+    .sum-top .wordmark { font-size: 1.05rem; margin-bottom: 3px; }
+    .sum-top p { font-size: 0.78rem; color: var(--muted); }
+    .sum-stats { font-size: 0.76rem; color: var(--muted); text-align: center; margin-bottom: 18px; }
+
+    .sum-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 14px;
+    }
+    .s-sec { margin-bottom: 20px; }
+    .s-sec:last-child { margin-bottom: 0; }
+    .s-lbl {
+      font-size: 0.67rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .s-sec p { font-size: 0.875rem; line-height: 1.55; }
+    .s-sec ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+    .s-sec li {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      padding-left: 14px;
+      position: relative;
+    }
+    .s-sec li::before { content: '·'; position: absolute; left: 2px; color: var(--accent); font-weight: 700; }
+    .s-sec li strong { font-weight: 600; }
+    .s-div { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+    .sum-actions { display: flex; gap: 10px; }
+    .sum-actions .btn { flex: 1; padding: 11px 16px; font-size: 0.875rem; }
+
+    @media (max-width: 480px) {
+      .msg { max-width: 92%; }
+      .start-card { padding: 32px 22px; border-radius: 16px; }
+      #screen-summary { padding: 24px 14px 48px; }
+      .sum-card { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SCREEN A: START ── -->
+<div id="screen-start" class="screen active">
+  <div class="start-card">
+    <div class="goose">🪿</div>
+    <div class="wordmark">Woolly <em>Goose</em></div>
+    <p class="tagline">A 10-minute conversation to uncover where AI can make the biggest difference in your work</p>
+    <div class="meta">
+      <div class="meta-item"><div class="val">~10</div><div class="lbl">minutes</div></div>
+      <div class="meta-item"><div class="val">5</div><div class="lbl">phases</div></div>
+      <div class="meta-item"><div class="val">2–3</div><div class="lbl">ideas for you</div></div>
+    </div>
+    <input
+      id="access-code"
+      class="access-input"
+      type="password"
+      placeholder="Access code (if required)"
+      autocomplete="off"
+    />
+    <button class="btn" onclick="startSession()">Start Interview →</button>
+  </div>
+</div>
+
+<!-- ── SCREEN B: CHAT ── -->
+<div id="screen-chat" class="screen">
+  <div class="chat-header">
+    <div class="chat-header-top">
+      <div class="header-wordmark">Woolly <em>Goose</em></div>
+      <div class="timer" id="timer">0:00</div>
+    </div>
+    <div class="progress-bar" id="progress-bar">
+      <div class="seg" data-phase="1"></div>
+      <div class="seg" data-phase="2"></div>
+      <div class="seg" data-phase="3"></div>
+      <div class="seg" data-phase="4"></div>
+      <div class="seg" data-phase="5"></div>
+    </div>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="chat-footer">
+    <textarea
+      id="chat-input"
+      placeholder="Type your response…"
+      rows="1"
+      onkeydown="handleKey(event)"
+      oninput="autoResize(this)"
+    ></textarea>
+    <button class="btn" id="send-btn" onclick="sendMsg()">↑</button>
+  </div>
+</div>
+
+<!-- ── SCREEN C: SUMMARY ── -->
+<div id="screen-summary" class="screen">
+  <div class="sum-inner">
+    <div class="sum-top">
+      <div class="wordmark">Woolly <em>Goose</em></div>
+      <p>Interview complete · Here's your summary</p>
+    </div>
+    <div class="sum-stats" id="sum-stats"></div>
+    <div class="sum-card" id="sum-card"></div>
+    <div class="sum-actions">
+      <button class="btn btn-ghost" onclick="copySummary()">Copy Summary</button>
+      <button class="btn" onclick="resetSession()">New Session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const MODEL = 'claude-sonnet-4-6';
+
+const SYSTEM_PROMPT = `You are Woolly Goose, a warm and perceptive AI interviewer. Your mission: help working professionals discover high-value, practical applications of AI in their specific role. You sound like a thoughtful colleague — genuinely curious, direct, never corporate.
+
+CORE RULES:
+- Ask ONE question at a time. Never bundle questions.
+- Keep responses to 3–5 sentences max during phases 1–4.
+- Reflect back what you hear before moving forward.
+- Prose only in conversation. No bullet points. No markdown formatting (no bold, no asterisks).
+- Be specific in phase 4 suggestions — name the exact workflow, not a vague category.
+
+PHASE SIGNALS — CRITICAL:
+At the very start of your FIRST message in each new phase, emit this HTML comment with no leading characters: <!--PHASE:N--> where N is 1–5. It must appear before any other text in the message. It is invisible to users.
+Example: <!--PHASE:2-->That's a clear picture of your role. Now I'm curious — are you already using any AI tools in your work?
+
+---
+
+PHASE 1 — Welcome & Role Discovery (~2 min, 2–3 turns)
+Emit: <!--PHASE:1-->
+Trigger: When user's message is [BEGIN].
+Goal: Understand their job title, team, key responsibilities, and main time drains.
+Opening: Introduce yourself briefly, mention the 10-minute format, ask their role and what a typical week looks like. Be warm and direct.
+Track internally: [role_type], [key_tasks], [industry]
+Transition when: Clear role picture + 2 responsibilities. Bridge: "That gives me a really clear picture of your world. Now I'm curious — are you already using any AI tools in your work?"
+
+PHASE 2 — Current AI Usage Mapping (~2 min, 2–3 turns)
+Emit: <!--PHASE:2-->
+Goal: Map all AI tools and workflows they currently use.
+Ask open first: "What AI tools or assistants do you use day-to-day?" Then probe: what task, which tool, how often.
+Track internally: [current_ai_uses] — a list of specific tasks and tools mentioned
+Transition when: User signals completeness or 3+ uses mapped. Bridge: "Of everything you've mentioned, which has had the biggest impact — or saved you the most time?"
+
+PHASE 3 — Deep Dive on Best Win (~2 min, 2–3 turns)
+Emit: <!--PHASE:3-->
+Goal: Explore their top current AI use in depth to calibrate what "high value" means to them.
+Explore: what did they do before? Time saved? Any friction? What doesn't work well?
+Reflect: "So the big win there was [X] — does that capture it?"
+Track internally: [top_win], [value_metric]
+Transition when: One workflow explored in depth. Bridge: "Based on everything you've shared, I have a few ideas for areas that tend to unlock real value for [role_type] professionals — things I haven't heard you mention yet. Want to hear them?"
+
+PHASE 4 — Opportunity Suggestion & Validation (~3 min, 3–4 turns)
+Emit: <!--PHASE:4-->
+Goal: Suggest exactly 2–3 high-value AI opportunities NOT in [current_ai_uses]. Validate each.
+- Before suggesting, check [current_ai_uses]. Only pick things clearly not covered.
+- Present ONE suggestion at a time: 2–3 sentences on what it is and why it creates value for their role.
+- After each: "Does this resonate with how you work?" or "Is that something that would actually be useful?"
+- Track internally: [suggestions] = [{idea, resonance: yes/partial/no}]
+- If user says something is already covered, move to the next suggestion.
+Transition when: All 2–3 suggestions presented and user responded to each. Bridge: "Perfect — let me pull together a summary of what we covered."
+
+PHASE 5 — Summary (~1 min, 1 turn)
+Emit: <!--PHASE:5-->
+Goal: Deliver the structured summary block below, then ask if anything was missed.
+IMPORTANT: Emit <!--PHASE:5--> then [SUMMARY_START] with NO other text between them. Fill all bracketed fields accurately from the conversation.
+
+---
+
+HIGH-VALUE AI USE CASE TAXONOMY
+Use in Phase 4. Only suggest what is NOT already in [current_ai_uses].
+
+Engineering/Software: automated test generation from existing code · PR and code review summarization · documentation generated from codebases · incident post-mortem drafting from logs · translating tickets into implementation specs · onboarding docs for new engineers · debugging with full error context
+
+Product Management: user interview synthesis and theme extraction · PRD drafting from bullet points · A/B test hypothesis generation from user feedback · meeting notes to structured action items · stakeholder update drafts from raw data · roadmap prioritization with AI-scored rationale · competitive analysis summarization
+
+Sales: personalized outreach drafted from LinkedIn or CRM data · call transcript summarization into CRM notes · competitive battlecard generation · proposal narrative from RFP documents · deal risk analysis from call notes · objection handling prep for specific accounts · win/loss interview synthesis
+
+Marketing: long-form content repurposed to multiple formats (blog to social to email) · A/B copy variant generation at scale · SEO brief generation from keyword clusters · campaign brief from strategy docs · brand voice consistency checking · social listening theme synthesis
+
+Finance: board report and financial narrative drafting · variance analysis explanation generation · budget review summarization for non-finance stakeholders · contract clause extraction and risk flagging · forecast commentary from model outputs · due diligence document synthesis
+
+HR/People Ops: job description drafting and bias checking · interview question generation by competency · performance review narrative assistance · survey response theme extraction · employee handbook Q&A assistant · onboarding materials drafting
+
+Legal/Compliance: contract first-pass review and clause flagging · NDA and agreement summarization · regulatory update summarization for the business · compliance checklist from new regulations · privacy policy plain-language drafting
+
+Operations/Customer Success: SOP documentation from tribal knowledge · customer escalation response drafting · knowledge base articles from resolved tickets · root cause analysis structuring · QBR deck narrative from account data · customer onboarding email sequence drafting
+
+Research/Data/Analytics: literature review summarization · quantitative findings converted to narrative · survey instrument drafting · data anomaly narration for stakeholders · methodology documentation
+
+Executive/Leadership: weekly update and board memo drafting · strategic narrative from bullet points · all-hands Q&A preparation · OKR drafting from strategic priorities · team communication for sensitive topics
+
+---
+
+SUMMARY FORMAT — output EXACTLY this block in Phase 5:
+
+<!--PHASE:5-->
+[SUMMARY_START]
+**Role:** [job title and team context, one line]
+
+**What you're already using AI for:**
+- [task — tool]
+- [task — tool]
+- [additional if mentioned]
+
+**Top win so far:** [one sentence on their highest-impact current AI use and what it delivers]
+
+**Suggested opportunities to explore:**
+- **[Opportunity 1 name]:** [one sentence — what it is and why it matters for their role]
+- **[Opportunity 2 name]:** [one sentence — what it is and why it matters for their role]
+- **[Opportunity 3 if applicable]:** [one sentence]
+
+**How each suggestion landed:**
+- **[Opportunity 1]:** [Resonated / Partially resonated / Not applicable] — [brief note]
+- **[Opportunity 2]:** [same format]
+[SUMMARY_END]
+
+Does this capture everything, or is there anything you'd want to add?`;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const state = {
+  phase: 1,
+  messages: [],
+  sessionStart: null,
+  timerInterval: null,
+  isStreaming: false,
+  turnCount: 0,
+  summaryRaw: '',
+};
+
+// ─── SCREENS ─────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+// ─── SESSION ─────────────────────────────────────────────────────────────────
+function startSession() {
+  const code = document.getElementById('access-code').value.trim();
+  if (code) sessionStorage.setItem('wg_code', code);
+  Object.assign(state, { phase: 1, messages: [], sessionStart: Date.now(), turnCount: 0, summaryRaw: '', isStreaming: false });
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('chat-input').value = '';
+  document.getElementById('timer').textContent = '0:00';
+  document.getElementById('timer').className = 'timer';
+  updatePB();
+  showScreen('chat');
+  startTimer();
+  state.messages.push({ role: 'user', content: '[BEGIN]' });
+  callClaude();
+}
+
+function resetSession() {
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  showScreen('start');
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer() {
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - state.sessionStart) / 1000);
+    const el = document.getElementById('timer');
+    el.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    el.className = s >= 720 ? 'timer over' : s >= 480 ? 'timer warn' : 'timer';
+  }, 1000);
+}
+
+// ─── PROGRESS BAR ─────────────────────────────────────────────────────────────
+function updatePB() {
+  document.querySelectorAll('.seg').forEach(seg => {
+    const p = parseInt(seg.dataset.phase);
+    seg.className = 'seg' + (p < state.phase ? ' done' : p === state.phase ? ' active' : '');
+  });
+}
+
+// ─── USER INPUT ───────────────────────────────────────────────────────────────
+function sendMsg() {
+  const el = document.getElementById('chat-input');
+  const text = el.value.trim();
+  if (!text || state.isStreaming) return;
+  el.value = '';
+  el.style.height = '';
+  appendBubble('user', text);
+  state.messages.push({ role: 'user', content: text });
+  state.turnCount++;
+  callClaude();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 96) + 'px';
+}
+
+// ─── DOM HELPERS ──────────────────────────────────────────────────────────────
+function appendBubble(role, text) {
+  const c = document.getElementById('chat-messages');
+  const m = document.createElement('div'); m.className = 'msg ' + role;
+  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
+  m.appendChild(b); c.appendChild(m); scrollBottom();
+  return b;
+}
+
+function createTypingEl() {
+  const c = document.getElementById('chat-messages');
+  const m = document.createElement('div'); m.className = 'msg ai'; m.id = 'active-msg';
+  const b = document.createElement('div'); b.className = 'bubble';
+  b.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+  m.appendChild(b); c.appendChild(m); scrollBottom();
+  return m;
+}
+
+function scrollBottom() {
+  const c = document.getElementById('chat-messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function callClaude() {
+  state.isStreaming = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('chat-input').disabled = true;
+
+  const msgEl = createTypingEl();
+  const bubbleEl = msgEl.querySelector('.bubble');
+  let fullText = '';
+  let hasContent = false;
+
+  try {
+    const accessCode = sessionStorage.getItem('wg_code') || '';
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: {
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        ...(accessCode && { 'x-access-code': accessCode }),
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: state.messages,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      msgEl.remove();
+      showError(res.status, err.error?.message);
+      return;
+    }
+
+    // SSE streaming
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        try {
+          const ev = JSON.parse(raw);
+          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
+            fullText += ev.delta.text;
+            const display = cleanPhase(fullText);
+            if (!hasContent && display) { bubbleEl.innerHTML = ''; hasContent = true; }
+            if (hasContent) { bubbleEl.textContent = display; scrollBottom(); }
+          }
+        } catch {}
+      }
+    }
+
+    onComplete(fullText, msgEl, bubbleEl);
+
+  } catch (err) {
+    document.getElementById('active-msg')?.remove();
+    console.error('Woolly Goose fetch error:', err);
+    const isCsp = err instanceof TypeError && /fetch|network|blocked/i.test(err.message || '');
+    showError(0, isCsp
+      ? 'Request blocked — open woolly-goose.html directly in your browser (File → Open, or double-click it). The preview panel restricts outbound API calls.'
+      : 'Network error: ' + (err.message || 'unknown. Check the browser console for details.'));
+  } finally {
+    state.isStreaming = false;
+    document.getElementById('send-btn').disabled = false;
+    const inp = document.getElementById('chat-input');
+    inp.disabled = false;
+    inp.focus();
+  }
+}
+
+function cleanPhase(text) {
+  return text.replace(/<!--PHASE:\d+-->/g, '').trim();
+}
+
+function onComplete(fullText, msgEl, bubbleEl) {
+  // Phase detection
+  const pm = fullText.match(/<!--PHASE:(\d+)-->/);
+  if (pm) {
+    const p = parseInt(pm[1]);
+    if (p > state.phase) { state.phase = p; updatePB(); }
+  }
+
+  msgEl.removeAttribute('id');
+
+  // Summary
+  if (fullText.includes('[SUMMARY_START]')) {
+    msgEl.remove();
+    state.summaryRaw = fullText;
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    buildSummary(fullText);
+    return;
+  }
+
+  // Normal message
+  const clean = cleanPhase(fullText);
+  bubbleEl.textContent = clean;
+  state.messages.push({ role: 'assistant', content: clean });
+}
+
+// ─── ERROR ────────────────────────────────────────────────────────────────────
+function showError(status, detail) {
+  let msg = detail || 'Something went wrong. Please try again.';
+  if (status === 401) msg = 'Server configuration error — contact the administrator.';
+  else if (status === 403) msg = 'Invalid access code. Check with the administrator and try again.';
+  else if (status === 429) msg = 'Rate limit reached. Wait a moment, then continue.';
+  const c = document.getElementById('chat-messages');
+  const m = document.createElement('div'); m.className = 'msg error';
+  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = msg;
+  m.appendChild(b); c.appendChild(m); scrollBottom();
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────────────────────
+function buildSummary(raw) {
+  const match = raw.match(/\[SUMMARY_START\]([\s\S]*?)\[SUMMARY_END\]/);
+  const content = match ? match[1].trim() : raw;
+  document.getElementById('sum-card').innerHTML = parseSummaryMd(content);
+
+  const s = Math.floor((Date.now() - state.sessionStart) / 1000);
+  document.getElementById('sum-stats').textContent =
+    `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · ${state.turnCount} exchanges`;
+
+  showScreen('summary');
+}
+
+function parseSummaryMd(text) {
+  // Split on **Heading:** markers into sections
+  const parts = [];
+  const re = /\*\*(.+?):\*\*/g;
+  let m, lastEnd = 0;
+
+  while ((m = re.exec(text)) !== null) {
+    if (parts.length > 0) {
+      parts[parts.length - 1].body += text.slice(lastEnd, m.index);
+    }
+    parts.push({ title: m[1], body: text.slice(m.index + m[0].length) });
+    lastEnd = m.index + m[0].length;
+  }
+  // For the last section, body is already the remaining text
+  // For earlier sections, we need to truncate at the next heading
+  // Re-process: rebuild properly
+  const sections = [];
+  const lines = text.split('\n');
+  let cur = null;
+
+  for (const line of lines) {
+    const hm = line.match(/^\*\*(.+?):\*\*\s*(.*)/);
+    if (hm) {
+      if (cur) sections.push(cur);
+      cur = { title: hm[1], lines: hm[2] ? [hm[2]] : [] };
+    } else if (cur && line.trim()) {
+      cur.lines.push(line.trim());
+    }
+  }
+  if (cur) sections.push(cur);
+
+  return sections.map((sec, i) => {
+    const listLines = sec.lines.filter(l => l.startsWith('- '));
+    const paraLines = sec.lines.filter(l => !l.startsWith('- '));
+
+    let inner = '';
+    if (listLines.length) {
+      const lis = listLines.map(l => {
+        const t = l.replace(/^-\s*/, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        return `<li>${t}</li>`;
+      }).join('');
+      inner += `<ul>${lis}</ul>`;
+    }
+    if (paraLines.length) {
+      inner += paraLines.map(p =>
+        `<p>${p.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')}</p>`
+      ).join('');
+    }
+
+    const divider = i > 0 ? '<hr class="s-div">' : '';
+    return `${divider}<div class="s-sec"><div class="s-lbl">${sec.title}</div>${inner}</div>`;
+  }).join('');
+}
+
+function copySummary() {
+  const m = state.summaryRaw.match(/\[SUMMARY_START\]([\s\S]*?)\[SUMMARY_END\]/);
+  const text = m ? m[1].trim() : '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-ghost');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }).catch(() => {
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('sum-card'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+showScreen('start');
+</script>
+</body>
+</html>
