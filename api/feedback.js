@@ -28,7 +28,7 @@ export default async function handler(req) {
       'Content-Type':  'application/json',
       'Prefer':        'return=minimal',
     },
-    body: JSON.stringify({ helpful: body.helpful }),
+    body: JSON.stringify({ helpful: body.helpful, feedback_text: body.feedbackText ?? null }),
   });
 
   if (!res.ok) {

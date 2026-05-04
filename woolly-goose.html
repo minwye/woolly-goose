@@ -308,27 +308,48 @@
 
     .feedback-block {
       margin-top: 20px;
-      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
     }
     .feedback-label {
       font-size: 0.8rem;
       color: var(--muted);
       margin-bottom: 10px;
     }
-    .feedback-btns { display: flex; gap: 10px; justify-content: center; }
+    .feedback-btns { display: flex; gap: 10px; margin-bottom: 16px; }
     .feedback-btn {
+      flex: 1;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 9px 22px;
-      font-size: 0.9rem;
+      padding: 9px 16px;
+      font-size: 0.875rem;
       font-family: inherit;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
-    .feedback-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .feedback-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-light); }
+    .feedback-btn.selected { border-color: var(--accent); background: var(--accent-light); font-weight: 600; }
     .feedback-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .feedback-thanks { font-size: 0.82rem; color: var(--muted); }
+    .feedback-textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 13px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.15s;
+      margin-bottom: 10px;
+    }
+    .feedback-textarea:focus { border-color: var(--accent); background: var(--surface); }
+    .feedback-thanks { font-size: 0.82rem; color: var(--muted); text-align: center; padding: 4px 0; }
 
     @media (max-width: 480px) {
       .msg { max-width: 92%; }
@@ -412,9 +433,12 @@
     <div class="feedback-block" id="feedback-block">
       <p class="feedback-label">Did you find this session helpful?</p>
       <div class="feedback-btns">
-        <button class="feedback-btn" onclick="submitFeedback(true)">👍 Yes</button>
-        <button class="feedback-btn" onclick="submitFeedback(false)">👎 Not really</button>
+        <button class="feedback-btn" id="fb-yes" onclick="selectHelpful(true)">👍 Yes</button>
+        <button class="feedback-btn" id="fb-no"  onclick="selectHelpful(false)">👎 Not really</button>
       </div>
+      <p class="feedback-label">Anything we could improve about this experience?</p>
+      <textarea class="feedback-textarea" id="feedback-text" rows="3" placeholder="Optional — your thoughts help us improve"></textarea>
+      <button class="btn" onclick="submitFeedback()">Send feedback</button>
     </div>
   </div>
 </div>
@@ -539,6 +563,7 @@ const state = {
   summaryRaw: '',
   participantName: '',
   transcriptId: null,
+  helpfulSelection: null,
 };
 
 // ─── SCREENS ─────────────────────────────────────────────────────────────────
@@ -804,16 +829,27 @@ async function saveTranscript(summaryRaw, durationSecs) {
   }
 }
 
-async function submitFeedback(helpful) {
+function selectHelpful(value) {
+  state.helpfulSelection = value;
+  document.getElementById('fb-yes').classList.toggle('selected', value === true);
+  document.getElementById('fb-no').classList.toggle('selected', value === false);
+}
+
+async function submitFeedback() {
   const block = document.getElementById('feedback-block');
-  block.querySelectorAll('.feedback-btn').forEach(b => b.disabled = true);
+  const text = document.getElementById('feedback-text').value.trim();
+  block.querySelectorAll('button').forEach(b => b.disabled = true);
 
   try {
     if (state.transcriptId) {
       await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: state.transcriptId, helpful }),
+        body: JSON.stringify({
+          id: state.transcriptId,
+          helpful: state.helpfulSelection,
+          feedbackText: text || null,
+        }),
       });
     }
   } catch {}
