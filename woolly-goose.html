@@ -101,7 +101,7 @@
     }
     .btn-ghost:hover:not(:disabled) { background: var(--bg); }
 
-    .access-input {
+    .name-input {
       width: 100%;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -113,11 +113,19 @@
       background: var(--bg);
       margin-bottom: 10px;
       text-align: center;
-      letter-spacing: 0.05em;
       transition: border-color 0.15s;
     }
-    .access-input:focus { border-color: var(--accent); background: var(--surface); }
-    .access-input::placeholder { color: var(--muted); letter-spacing: 0; }
+    .name-input:focus { border-color: var(--accent); background: var(--surface); }
+    .name-input::placeholder { color: var(--muted); }
+
+    .research-notice {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
 
     /* ── CHAT SCREEN ── */
     .chat-header {
@@ -304,13 +312,18 @@
       <div class="meta-item"><div class="val">2–3</div><div class="lbl">ideas for you</div></div>
     </div>
     <input
-      id="access-code"
-      class="access-input"
-      type="password"
-      placeholder="Access code (if required)"
-      autocomplete="off"
+      id="full-name"
+      class="name-input"
+      type="text"
+      placeholder="Your full name"
+      autocomplete="name"
+      autocapitalize="words"
     />
     <button class="btn" onclick="startSession()">Start Interview →</button>
+    <p class="research-notice">
+      By participating, you agree that your name and the full transcript of this conversation
+      will be recorded and used for research purposes. No other personal data is collected.
+    </p>
   </div>
 </div>
 
@@ -476,6 +489,7 @@ const state = {
   isStreaming: false,
   turnCount: 0,
   summaryRaw: '',
+  participantName: '',
 };
 
 // ─── SCREENS ─────────────────────────────────────────────────────────────────
@@ -486,8 +500,9 @@ function showScreen(id) {
 
 // ─── SESSION ─────────────────────────────────────────────────────────────────
 function startSession() {
-  const code = document.getElementById('access-code').value.trim();
-  if (code) sessionStorage.setItem('wg_code', code);
+  const name = document.getElementById('full-name').value.trim();
+  if (!name) { document.getElementById('full-name').focus(); return; }
+  state.participantName = name;
   Object.assign(state, { phase: 1, messages: [], sessionStart: Date.now(), turnCount: 0, summaryRaw: '', isStreaming: false });
   document.getElementById('chat-messages').innerHTML = '';
   document.getElementById('chat-input').value = '';
@@ -581,13 +596,11 @@ async function callClaude() {
   let hasContent = false;
 
   try {
-    const accessCode = sessionStorage.getItem('wg_code') || '';
     const res = await fetch('/api/messages', {
       method: 'POST',
       headers: {
         'anthropic-version': '2023-06-01',
         'content-type': 'application/json',
-        ...(accessCode && { 'x-access-code': accessCode }),
       },
       body: JSON.stringify({
         model: MODEL,
