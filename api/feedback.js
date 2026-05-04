@@ -12,31 +12,23 @@ export default async function handler(req) {
 
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!url || !key) {
-    return new Response('Storage not configured', { status: 503, headers: CORS });
-  }
+  if (!url || !key) return new Response('Storage not configured', { status: 503, headers: CORS });
 
   let body;
   try { body = await req.json(); }
   catch { return new Response('Invalid JSON', { status: 400, headers: CORS }); }
 
-  const res = await fetch(`${url}/rest/v1/transcripts`, {
-    method: 'POST',
+  if (!body.id) return new Response('Missing id', { status: 400, headers: CORS });
+
+  const res = await fetch(`${url}/rest/v1/transcripts?id=eq.${body.id}`, {
+    method: 'PATCH',
     headers: {
       'apikey':        key,
       'Authorization': `Bearer ${key}`,
       'Content-Type':  'application/json',
-      'Prefer':        'return=representation',
+      'Prefer':        'return=minimal',
     },
-    body: JSON.stringify({
-      participant_name:      body.participantName,
-      session_duration_secs: body.durationSecs,
-      turn_count:            body.turnCount,
-      phase_reached:         body.phaseReached,
-      messages:              body.messages,
-      summary:               body.summary,
-    }),
+    body: JSON.stringify({ helpful: body.helpful }),
   });
 
   if (!res.ok) {
@@ -44,9 +36,5 @@ export default async function handler(req) {
     return new Response(`Upstream error: ${err}`, { status: 502, headers: CORS });
   }
 
-  const [row] = await res.json();
-  return new Response(JSON.stringify({ id: row.id }), {
-    status: 200,
-    headers: { ...CORS, 'content-type': 'application/json' },
-  });
+  return new Response('ok', { status: 200, headers: CORS });
 }
