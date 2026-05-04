@@ -716,6 +716,27 @@ function buildSummary(raw) {
     `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')} · ${state.turnCount} exchanges`;
 
   showScreen('summary');
+  saveTranscript(raw, s);
+}
+
+async function saveTranscript(summaryRaw, durationSecs) {
+  const messages = state.messages.filter(m => m.content !== '[BEGIN]');
+  try {
+    await fetch('/api/save-transcript', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        participantName: state.participantName,
+        durationSecs,
+        turnCount:    state.turnCount,
+        phaseReached: state.phase,
+        messages,
+        summary: summaryRaw,
+      }),
+    });
+  } catch {
+    // silent — don't disrupt the user's summary view
+  }
 }
 
 function parseSummaryMd(text) {
