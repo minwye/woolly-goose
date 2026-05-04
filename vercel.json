@@ -1,0 +1,5 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/woolly-goose.html", "permanent": false }
+  ]
+}
